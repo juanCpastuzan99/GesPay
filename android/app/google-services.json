@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1030128422260",
+    "project_id": "gespay-27b63",
+    "storage_bucket": "gespay-27b63.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1030128422260:android:b40018e08e26d27bb23021",
+        "android_client_info": {
+          "package_name": "com.example.flutter_aplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1030128422260-vt073e6gjc773mqhvv8560jqfrjoiq51.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYHYkg-2LWIwcvcaEG-hsNeGKfZepMGm0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1030128422260-vt073e6gjc773mqhvv8560jqfrjoiq51.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
