@@ -1,13 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/firebase_auth_provider.dart';
-import '../../providers/mock_expense_provider.dart';
+import '../../providers/firestore_expense_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/firestore_init_service.dart';
 import '../expense/add_expense_screen.dart';
 import '../expense/expense_list_screen.dart';
 
-class ImprovedHomeScreen extends StatelessWidget {
+class ImprovedHomeScreen extends StatefulWidget {
   const ImprovedHomeScreen({super.key});
+
+  @override
+  State<ImprovedHomeScreen> createState() => _ImprovedHomeScreenState();
+}
+
+class _ImprovedHomeScreenState extends State<ImprovedHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Inicializar Firestore cuando se construye la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final expenseProvider = Provider.of<FirestoreExpenseProvider>(
+        context,
+        listen: false,
+      );
+      FirestoreInitService.initializeForUser(expenseProvider);
+    });
+  }
+
+  // Skeleton loading para estadísticas
+  Widget _buildStatsSkeleton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _buildSkeletonCard(context)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSkeletonCard(context)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildSkeletonCard(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonCard(BuildContext context) {
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Center(child: CircularProgressIndicator()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +73,13 @@ class ImprovedHomeScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     _buildWelcomeCard(context),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _buildStatsCards(context),
                     const SizedBox(height: 20),
                     _buildQuickActions(context),
                     const SizedBox(height: 20),
                     _buildRecentExpenses(context),
-                    const SizedBox(height: 100), // Espacio para FAB
+                    const SizedBox(height: 120), // Más espacio para FAB
                   ],
                 ),
               ),
@@ -53,22 +103,64 @@ class ImprovedHomeScreen extends StatelessWidget {
             ),
           ],
         ),
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
-            );
+        child: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'expense') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddExpenseScreen(isIncome: false),
+                ),
+              );
+            } else if (value == 'income') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddExpenseScreen(isIncome: true),
+                ),
+              );
+            }
           },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text(
-            'Agregar Gasto',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
+          itemBuilder: (context) => [
+            const PopupMenuItem<String>(
+              value: 'expense',
+              child: Row(
+                children: [
+                  Icon(Icons.trending_down, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Agregar Gasto'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'income',
+              child: Row(
+                children: [
+                  Icon(Icons.trending_up, color: Colors.green),
+                  SizedBox(width: 12),
+                  Text('Agregar Ingreso'),
+                ],
+              ),
+            ),
+          ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Agregar',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Icon(Icons.arrow_drop_down, color: Colors.white),
+              ],
             ),
           ),
         ),
@@ -230,7 +322,7 @@ class ImprovedHomeScreen extends StatelessWidget {
                       'Bienvenido de vuelta',
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -241,7 +333,7 @@ class ImprovedHomeScreen extends StatelessWidget {
                         color: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -255,8 +347,13 @@ class ImprovedHomeScreen extends StatelessWidget {
   }
 
   Widget _buildStatsCards(BuildContext context) {
-    return Consumer<MockExpenseProvider>(
+    return Consumer<FirestoreExpenseProvider>(
       builder: (context, expenseProvider, child) {
+        // Mostrar skeleton loading si está cargando inicialmente
+        if (expenseProvider.isInitialLoad && expenseProvider.isLoading) {
+          return _buildStatsSkeleton(context);
+        }
+
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -511,7 +608,7 @@ class ImprovedHomeScreen extends StatelessWidget {
   }
 
   Widget _buildRecentExpenses(BuildContext context) {
-    return Consumer<MockExpenseProvider>(
+    return Consumer<FirestoreExpenseProvider>(
       builder: (context, expenseProvider, child) {
         final recentExpenses = expenseProvider.expenses.take(3).toList();
 

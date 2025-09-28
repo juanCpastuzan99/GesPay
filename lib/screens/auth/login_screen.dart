@@ -90,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 24),
                               const Text(
-                                'GesPay',
+                                'GesPay 💰',
                                 style: TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
@@ -100,6 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 8),
                               const Text(
                                 'Gestiona tus gastos de forma inteligente',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey,
@@ -195,7 +196,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                   );
                                 },
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 8),
+                              // Botón de recuperar contraseña
+                              Center(
+                                child: TextButton(
+                                  onPressed: () => _showPasswordResetDialog(),
+                                  child: const Text(
+                                    '¿Olvidaste tu contraseña?',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
                               TextButton(
                                 onPressed: () {
                                   Navigator.push(
@@ -257,6 +273,113 @@ class _LoginScreenState extends State<LoginScreen> {
               authProvider.error.isNotEmpty
                   ? authProvider.error
                   : 'Error al iniciar sesión',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPasswordResetDialog() {
+    final emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recuperar Contraseña'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa tu email para recibir un enlace de recuperación:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                prefixIcon: Icon(Icons.email),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          Consumer<FirebaseAuthProvider>(
+            builder: (context, authProvider, child) {
+              return ElevatedButton(
+                onPressed: authProvider.isLoading
+                    ? null
+                    : () => _handlePasswordReset(
+                        emailController.text.trim(),
+                        authProvider,
+                      ),
+                child: authProvider.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Enviar'),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handlePasswordReset(
+    String email,
+    FirebaseAuthProvider authProvider,
+  ) async {
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor ingresa tu email'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (!email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor ingresa un email válido'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final success = await authProvider.sendPasswordResetEmail(email);
+
+    if (mounted) {
+      Navigator.pop(context); // Cerrar el diálogo
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Email de recuperación enviado a $email'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authProvider.error.isNotEmpty
+                  ? authProvider.error
+                  : 'Error al enviar email de recuperación',
             ),
             backgroundColor: Colors.red,
           ),

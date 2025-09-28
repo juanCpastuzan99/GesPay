@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Expense {
   final String id;
@@ -32,12 +33,23 @@ class Expense {
   }
 
   factory Expense.fromMap(Map<String, dynamic> map) {
+    DateTime date;
+    
+    // Manejar tanto Timestamp de Firestore como string ISO
+    if (map['date'] is Timestamp) {
+      date = (map['date'] as Timestamp).toDate();
+    } else if (map['date'] is String) {
+      date = DateTime.parse(map['date']);
+    } else {
+      date = DateTime.now();
+    }
+    
     return Expense(
       id: map['id'] ?? '',
       title: map['title'] ?? '',
       amount: (map['amount'] ?? 0.0).toDouble(),
       category: map['category'] ?? '',
-      date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
+      date: date,
       description: map['description'],
       userId: map['userId'] ?? '',
     );

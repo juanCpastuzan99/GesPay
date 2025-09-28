@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/mock_expense_provider.dart';
+import '../../providers/firestore_expense_provider.dart';
 import '../../models/expense.dart';
 import 'edit_expense_screen.dart';
 
@@ -26,7 +26,7 @@ class ExpenseListScreen extends StatelessWidget {
             ],
           ),
         ),
-        child: Consumer<MockExpenseProvider>(
+        child: Consumer<FirestoreExpenseProvider>(
           builder: (context, expenseProvider, child) {
             if (expenseProvider.isLoading) {
               return const Center(
@@ -85,7 +85,7 @@ class ExpenseListScreen extends StatelessWidget {
   Widget _buildExpenseCard(
     BuildContext context,
     Expense expense,
-    MockExpenseProvider expenseProvider,
+    FirestoreExpenseProvider expenseProvider,
   ) {
     final isIncome = expense.amount > 0;
     final color = isIncome ? Colors.green : Colors.red;
@@ -181,7 +181,7 @@ class ExpenseListScreen extends StatelessWidget {
     BuildContext context,
     String action,
     Expense expense,
-    MockExpenseProvider expenseProvider,
+    FirestoreExpenseProvider expenseProvider,
   ) {
     switch (action) {
       case 'edit':
@@ -201,7 +201,7 @@ class ExpenseListScreen extends StatelessWidget {
   void _showDeleteDialog(
     BuildContext context,
     Expense expense,
-    MockExpenseProvider expenseProvider,
+    FirestoreExpenseProvider expenseProvider,
   ) {
     showDialog(
       context: context,

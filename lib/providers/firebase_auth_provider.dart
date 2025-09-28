@@ -4,19 +4,35 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart';
 
 class FirebaseAuthProvider extends ChangeNotifier {
-  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  firebase_auth.FirebaseAuth? _auth;
+  FirebaseFirestore? _firestore;
   
   User? _currentUser;
   String _errorMessage = '';
   bool _isLoading = false;
+  bool _firebaseAvailable = false;
 
   User? get user => _currentUser;
   String get error => _errorMessage;
   bool get isLoading => _isLoading;
+  bool get firebaseAvailable => _firebaseAvailable;
 
   FirebaseAuthProvider() {
-    _auth.authStateChanges().listen(_onAuthStateChanged);
+    _initializeFirebase();
+  }
+
+  void _initializeFirebase() {
+    try {
+      _auth = firebase_auth.FirebaseAuth.instance;
+      _firestore = FirebaseFirestore.instance;
+      _firebaseAvailable = true;
+      _auth!.authStateChanges().listen(_onAuthStateChanged);
+      print('✅ Firebase Auth inicializado correctamente');
+    } catch (e) {
+      print('❌ Error inicializando Firebase Auth: $e');
+      _firebaseAvailable = false;
+      _errorMessage = 'Firebase no está disponible';
+    }
   }
 
   void _onAuthStateChanged(firebase_auth.User? firebaseUser) {
@@ -35,6 +51,11 @@ class FirebaseAuthProvider extends ChangeNotifier {
   }
 
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
+    if (!_firebaseAvailable || _auth == null) {
+      _errorMessage = 'Firebase no está disponible';
+      return false;
+    }
+
     try {
       _isLoading = true;
       _errorMessage = '';
@@ -42,7 +63,7 @@ class FirebaseAuthProvider extends ChangeNotifier {
 
       print('🔐 Intentando iniciar sesión con: $email');
 
-      final credential = await _auth.signInWithEmailAndPassword(
+      final credential = await _auth!.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -69,6 +90,11 @@ class FirebaseAuthProvider extends ChangeNotifier {
   }
 
   Future<bool> createUserWithEmailAndPassword(String email, String password, String name) async {
+    if (!_firebaseAvailable || _auth == null) {
+      _errorMessage = 'Firebase no está disponible';
+      return false;
+    }
+
     try {
       _isLoading = true;
       _errorMessage = '';
@@ -76,7 +102,7 @@ class FirebaseAuthProvider extends ChangeNotifier {
 
       print('📝 Creando usuario: $email');
 
-      final credential = await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth!.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -104,8 +130,10 @@ class FirebaseAuthProvider extends ChangeNotifier {
   }
 
   Future<void> _saveUserToFirestore(firebase_auth.User firebaseUser) async {
+    if (_firestore == null) return;
+    
     try {
-      final userDoc = _firestore.collection('users').doc(firebaseUser.uid);
+      final userDoc = _firestore!.collection('users').doc(firebaseUser.uid);
       await userDoc.set({
         'id': firebaseUser.uid,
         'email': firebaseUser.email,
@@ -118,14 +146,52 @@ class FirebaseAuthProvider extends ChangeNotifier {
     }
   }
 
+  // Enviar email de recuperación de contraseña
+  Future<bool> sendPasswordResetEmail(String email) async {
+    if (!_firebaseAvailable || _auth == null) {
+      _errorMessage = 'Firebase no está disponible';
+      return false;
+    }
+
+    try {
+      _isLoading = true;
+      _errorMessage = '';
+      notifyListeners();
+
+      print('📧 Enviando email de recuperación a: $email');
+
+      await _auth!.sendPasswordResetEmail(email: email);
+
+      print('✅ Email de recuperación enviado correctamente');
+      return true;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      print('❌ Error enviando email de recuperación: ${e.code} - ${e.message}');
+      _errorMessage = _getPasswordResetErrorMessage(e.code);
+      return false;
+    } catch (e) {
+      print('❌ Error inesperado: $e');
+      _errorMessage = 'Error inesperado: $e';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> signOut() async {
+    if (!_firebaseAvailable || _auth == null) {
+      _currentUser = null;
+      notifyListeners();
+      return;
+    }
+
     try {
       _isLoading = true;
       _errorMessage = '';
       notifyListeners();
       
       print('🚪 Cerrando sesión...');
-      await _auth.signOut();
+      await _auth!.signOut();
       _currentUser = null;
       print('✅ Sesión cerrada correctamente');
     } catch (e) {
@@ -155,6 +221,29 @@ class FirebaseAuthProvider extends ChangeNotifier {
         return 'Demasiados intentos. Intenta más tarde';
       default:
         return 'Error de autenticación: $errorCode';
+    }
+  }
+
+  String _getPasswordResetErrorMessage(String errorCode) {
+    switch (errorCode) {
+      case 'user-not-found':
+        return 'No existe una cuenta con este email';
+      case 'invalid-email':
+        return 'El email no es válido';
+      case 'user-disabled':
+        return 'Esta cuenta ha sido deshabilitada';
+      case 'too-many-requests':
+        return 'Demasiados intentos. Intenta más tarde';
+      case 'invalid-recipient-email':
+        return 'El email de destino no es válido';
+      case 'invalid-sender':
+        return 'Error en la configuración del servidor de email';
+      case 'invalid-verification-code':
+        return 'Código de verificación inválido';
+      case 'invalid-verification-id':
+        return 'ID de verificación inválido';
+      default:
+        return 'Error enviando email de recuperación: $errorCode';
     }
   }
 }

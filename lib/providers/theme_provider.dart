@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
-  bool _isDark = false;
+  ThemeMode _themeMode = ThemeMode.dark;
+  bool _isDark = true;
 
   ThemeMode get themeMode => _themeMode;
   bool get isDark => _isDark;
@@ -14,7 +14,7 @@ class ThemeProvider extends ChangeNotifier {
 
   void _loadTheme() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _isDark = prefs.getBool('isDark') ?? false;
+    _isDark = prefs.getBool('isDark') ?? true; // Tema oscuro por defecto
     _themeMode = _isDark ? ThemeMode.dark : ThemeMode.light;
     notifyListeners();
   }
@@ -51,12 +51,10 @@ class ThemeProvider extends ChangeNotifier {
         primary: Color(0xFF6366F1), // Indigo moderno
         secondary: Color(0xFF8B5CF6), // Púrpura vibrante
         surface: Color(0xFF1E1E2E), // Fondo principal oscuro
-        background: Color(0xFF0F0F23), // Fondo más oscuro
         onSurface: Color(0xFFE4E4E7), // Texto principal
-        onBackground: Color(0xFFF4F4F5), // Texto sobre fondo
         error: Color(0xFFEF4444), // Rojo para errores
         onError: Color(0xFFFFFFFF), // Texto sobre error
-        surfaceVariant: Color(0xFF3F3F46), // Variantes de superficie
+        surfaceContainerHighest: Color(0xFF3F3F46), // Variantes de superficie
         onSurfaceVariant: Color(0xFFA1A1AA), // Texto secundario
       ),
       scaffoldBackgroundColor: const Color(0xFF0F0F23),

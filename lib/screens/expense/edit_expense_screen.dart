@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/mock_expense_provider.dart';
+import '../../providers/firestore_expense_provider.dart';
 import '../../models/expense.dart';
 
 class EditExpenseScreen extends StatefulWidget {
@@ -21,6 +21,18 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   String _selectedCategory = 'Alimentación';
   DateTime _selectedDate = DateTime.now();
   bool _isIncome = false;
+
+  // Lista de categorías estática
+  static const List<String> _categories = [
+    'Alimentación',
+    'Transporte',
+    'Entretenimiento',
+    'Salud',
+    'Educación',
+    'Ropa',
+    'Hogar',
+    'Otros',
+  ];
 
   @override
   void initState() {
@@ -153,7 +165,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          items: MockExpenseProvider.categories.map((category) {
+                          items: _categories.map((category) {
                             return DropdownMenuItem(
                               value: category,
                               child: Text(category),
@@ -194,7 +206,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        Consumer<MockExpenseProvider>(
+                        Consumer<FirestoreExpenseProvider>(
                           builder: (context, expenseProvider, child) {
                             return SizedBox(
                               width: double.infinity,
@@ -251,7 +263,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
   }
 
-  Future<void> _handleSubmit(MockExpenseProvider expenseProvider) async {
+  Future<void> _handleSubmit(FirestoreExpenseProvider expenseProvider) async {
     if (_formKey.currentState!.validate()) {
       final amount = double.parse(_amountController.text);
       final updatedExpense = widget.expense.copyWith(
@@ -264,7 +276,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
             : _descriptionController.text.trim(),
       );
 
-      await expenseProvider.updateExpense(updatedExpense);
+      await expenseProvider.updateExpense(widget.expense.id, updatedExpense);
 
       if (mounted) {
         Navigator.pop(context);
