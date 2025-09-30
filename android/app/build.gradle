@@ -25,8 +25,8 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.example.flutter_aplication"
-    compileSdk flutter.compileSdkVersion
-    ndkVersion "27.0.12077973"
+    compileSdkVersion flutter.compileSdkVersion
+    // ndkVersion flutter.ndkVersion // ← Usa la versión de Flutter o elimina esta línea
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -51,6 +51,11 @@ android {
 
     buildTypes {
         release {
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
             signingConfig signingConfigs.debug
         }
     }
