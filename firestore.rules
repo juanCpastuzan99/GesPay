@@ -1,15 +1,55 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas temporales más permisivas para testing
-    match /expenses/{expenseId} {
-      // Permitir lectura y escritura para usuarios autenticados
-      allow read, write: if request.auth != null;
+    // Reglas para la colección de usuarios
+    match /users/{userId} {
+      // Solo el usuario autenticado puede leer y escribir sus propios datos
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Reglas para la colección de prueba
-    match /test/{testId} {
-      allow read, write: if request.auth != null;
+    // Reglas para la colección de gastos
+    match /expenses/{expenseId} {
+      // Solo usuarios autenticados pueden crear gastos
+      allow create: if request.auth != null 
+        && request.auth.uid == resource.data.userId
+        && request.resource.data.keys().hasAll(['title', 'amount', 'category', 'date', 'userId'])
+        && request.resource.data.title is string
+        && request.resource.data.amount is number
+        && request.resource.data.category is string
+        && request.resource.data.date is timestamp
+        && request.resource.data.userId is string;
+      
+      // Solo el propietario del gasto puede leerlo
+      allow read: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      // Solo el propietario del gasto puede actualizarlo
+      allow update: if request.auth != null 
+        && request.auth.uid == resource.data.userId
+        && request.resource.data.userId == resource.data.userId;
+      
+      // Solo el propietario del gasto puede eliminarlo
+      allow delete: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+    }
+    
+    // Reglas para la colección de categorías (si se implementa en el futuro)
+    match /categories/{categoryId} {
+      // Solo usuarios autenticados pueden leer categorías
+      allow read: if request.auth != null;
+      // Solo administradores pueden escribir categorías (implementar lógica de admin)
+      allow write: if request.auth != null && false; // Cambiar a true si se implementa sistema de admin
+    }
+    
+    // Reglas para la colección de configuraciones de usuario
+    match /userSettings/{userId} {
+      // Solo el usuario autenticado puede leer y escribir sus configuraciones
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Denegar acceso a cualquier otra colección
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

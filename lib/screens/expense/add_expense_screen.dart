@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/mock_expense_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../providers/firestore_expense_provider.dart';
 import '../../models/expense.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final bool isIncome;
+
+  const AddExpenseScreen({super.key, this.isIncome = false});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -15,10 +18,42 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   String _selectedCategory = 'Alimentación';
   DateTime _selectedDate = DateTime.now();
-  bool _isIncome = false;
+  late bool _isIncome;
+
+  static const List<String> _expenseCategories = [
+    'Alimentación',
+    'Transporte',
+    'Entretenimiento',
+    'Salud',
+    'Educación',
+    'Ropa',
+    'Hogar',
+    'Otros',
+  ];
+
+  static const List<String> _incomeCategories = [
+    'Salario',
+    'Freelance',
+    'Inversión',
+    'Venta',
+    'Bonificación',
+    'Otros',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _isIncome = widget.isIncome;
+    // Establecer categoría por defecto según el tipo
+    if (_isIncome) {
+      _selectedCategory = _incomeCategories.first;
+    } else {
+      _selectedCategory = _expenseCategories.first;
+    }
+  }
 
   @override
   void dispose() {
@@ -32,8 +67,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agregar Gasto'),
-        backgroundColor: const Color(0xFF667eea),
+        title: Text(_isIncome ? 'Agregar Ingreso' : 'Agregar Gasto'),
+        backgroundColor: _isIncome ? Colors.green : const Color(0xFF667eea),
         foregroundColor: Colors.white,
       ),
       body: Container(
@@ -41,10 +76,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
+            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
           ),
         ),
         child: SafeArea(
@@ -80,11 +112,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         const SizedBox(height: 32),
                         SwitchListTile(
                           title: const Text('Es un ingreso'),
-                          subtitle: const Text('Marca si es dinero que recibes'),
+                          subtitle: const Text(
+                            'Marca si es dinero que recibes',
+                          ),
                           value: _isIncome,
                           onChanged: (value) {
                             setState(() {
                               _isIncome = value;
+                              // Actualizar categoría por defecto según el tipo
+                              if (_isIncome) {
+                                _selectedCategory = _incomeCategories.first;
+                              } else {
+                                _selectedCategory = _expenseCategories.first;
+                              }
                             });
                           },
                           activeThumbColor: const Color(0xFF667eea),
@@ -111,7 +151,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           controller: _amountController,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'Cantidad',
+                            labelText: 'Cantidad (Pesos Colombianos)',
+                            hintText: 'Ej: 50000',
                             prefixIcon: const Icon(Icons.attach_money),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -132,20 +173,32 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          initialValue: _selectedCategory,
+                          value: _selectedCategory,
                           decoration: InputDecoration(
                             labelText: 'Categoría',
-                            prefixIcon: const Icon(Icons.category),
+                            prefixIcon: Icon(
+                              _isIncome
+                                  ? Icons.trending_up
+                                  : Icons.trending_down,
+                              color: _isIncome
+                                  ? Colors.green
+                                  : const Color(0xFF667eea),
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          items: MockExpenseProvider.categories.map((category) {
-                            return DropdownMenuItem(
-                              value: category,
-                              child: Text(category),
-                            );
-                          }).toList(),
+                          items:
+                              (_isIncome
+                                      ? _incomeCategories
+                                      : _expenseCategories)
+                                  .map((category) {
+                                    return DropdownMenuItem(
+                                      value: category,
+                                      child: Text(category),
+                                    );
+                                  })
+                                  .toList(),
                           onChanged: (value) {
                             setState(() {
                               _selectedCategory = value!;
@@ -181,7 +234,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        Consumer<MockExpenseProvider>(
+                        Consumer<FirestoreExpenseProvider>(
                           builder: (context, expenseProvider, child) {
                             return SizedBox(
                               width: double.infinity,
@@ -191,7 +244,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                     ? null
                                     : () => _handleSubmit(expenseProvider),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF667eea),
+                                  backgroundColor: _isIncome
+                                      ? Colors.green
+                                      : const Color(0xFF667eea),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -200,9 +255,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                     ? const CircularProgressIndicator(
                                         color: Colors.white,
                                       )
-                                    : const Text(
-                                        'Agregar Gasto',
-                                        style: TextStyle(
+                                    : Text(
+                                        _isIncome
+                                            ? 'Agregar Ingreso'
+                                            : 'Agregar Gasto',
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
@@ -238,7 +295,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  Future<void> _handleSubmit(MockExpenseProvider expenseProvider) async {
+  Future<void> _handleSubmit(FirestoreExpenseProvider expenseProvider) async {
     if (_formKey.currentState!.validate()) {
       final amount = double.parse(_amountController.text);
       final expense = Expense(
@@ -249,19 +306,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
-        userId: 'mock_user',
+        userId: FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
       );
 
-      await expenseProvider.addExpense(expense);
+      final success = await expenseProvider.addExpense(expense);
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gasto agregado exitosamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (success) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gasto agregado exitosamente a Firestore'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Error: ${expenseProvider.error ?? 'Error desconocido'}',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
